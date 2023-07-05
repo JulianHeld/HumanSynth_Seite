@@ -124,10 +124,12 @@ async function predictWebcam() {
     
     canvasCtx.restore();
 
+
+    // hier stattdess for schleife oder for each hand in gestures und in handedness …
     if (results.gestures.length > 0) { 
         // parse information
         const categoryName = results.gestures[0][0].categoryName;
-        const categoryScore = parseFloat(
+        const categoryScore = parseFloat( 
             results.gestures[0][0].score * 100
         ).toFixed(2);
 
