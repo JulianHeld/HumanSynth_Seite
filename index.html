@@ -7,6 +7,23 @@
     <title>Document</title>
     <link rel="stylesheet" href="./style.css">
     <script type="module">
+
+/********************************************************************
+ // Utilities
+********************************************************************/
+
+function calculateAverage(array) {
+    var total = 0;
+    var count = 0;
+
+    array.forEach(function(item, index) {
+        total += item;
+        count++;
+    });
+
+    return total / count;
+}
+
 /********************************************************************
  // Gesture Detector
 ********************************************************************/
@@ -140,8 +157,26 @@ async function predictWebcam() {
             results.gestures[0][0].score * 100
         ).toFixed(2);
 
+        // which hand 
+        if (results.handednesses[0][0].index == 0) { // right
+            const landmarks = results.landmarks[0];
+            let landmarksX = landmarks.map(element => element.x);
+            let landmarksY = landmarks.map(element => element.y);
+            var rightX = calculateAverage(landmarksX)
+            var rightY = calculateAverage(landmarksY)
+            console.log("right Hand coordinates: ", rightX, rightY);
+        } else if (results.handednesses[0][0].index == 1) { // left
+            const landmarks = results.landmarks[0];
+            let landmarksX = landmarks.map(element => element.x);
+            let landmarksY = landmarks.map(element => element.y);
+            var leftX = calculateAverage(landmarksX)
+            var leftY = calculateAverage(landmarksY)
+            console.log("left Hand coordinates: ", leftX, leftY);
+        }
+
+
         // print the result to console
-        console.log(categoryName, categoryScore);
+        // console.log(results, categoryName, categoryScore);
 
         // parse information and generate midi
         generateMidi(categoryName, categoryScore);
@@ -165,7 +200,7 @@ async function predictWebcam() {
 
 // ############ Zustand ############
 const idleChannel = 0; // Channel ohne Ton
-let currentChannel = idleChannel; // aktueller Channel/Gestes (am Anfang indleChannel)
+let currentChannel = idleChannel; // aktueller Channel/Gestes (am Anfang idleChannel)
 let midiOut = []; // Midi Outputs (werden in initDevices gesetzt)
 
 // ############ Funktionen ############
