@@ -1,20 +1,4 @@
 /********************************************************************
- // Utilities
-********************************************************************/
-
-function calculateAverage(array) {
-  var total = 0;
-  var count = 0;
-
-  array.forEach(function (item, index) {
-    total += item;
-    count++;
-  });
-
-  return total / count;
-}
-
-/********************************************************************
  // Gesture Detector
 ********************************************************************/
 
@@ -23,9 +7,7 @@ import {
   GestureRecognizer,
 } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0";
 
-const demosSection = document.getElementById("demos");
 let gestureRecognizer;
-let enableWebcamButton;
 let webcamRunning = false;
 const videoHeight = "360px";
 const videoWidth = "480px";
@@ -57,7 +39,7 @@ const createGestureRecognizer = async () => {
  // Webcam
 ********************************************************************/
 
-// // Enable the live webcam view and start detection.
+// Enable the live webcam view and start detection.
 function enableCam() {
   if (!gestureRecognizer) {
     alert("Please wait for gestureRecognizer to load");
@@ -98,64 +80,74 @@ async function predictWebcam() {
   canvasElement.style.width = videoWidth;
   webcamElement.style.width = videoWidth;
 
-  if (results.landmarks) {
-    for (const landmarks of results.landmarks) {
-      drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
-        color: "#00FF00",
-        lineWidth: 5,
-      });
-      drawLandmarks(canvasCtx, landmarks, { color: "#FF0000", lineWidth: 2 });
-    }
-
-    // Hier müsste man dann die Höhe der landmarks berechnen
+  // Für alle Hände die Kamera Overlay zeichnen
+  for (const landmarks of results.landmarks) {
+    drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
+      color: "#00FF00",
+      lineWidth: 5,
+    });
+    drawLandmarks(canvasCtx, landmarks, { color: "#FF0000", lineWidth: 2 });
   }
 
   canvasCtx.restore();
 
-  // hier stattdess for schleife oder for each hand in gestures und in handedness …
+  // Wenn es eine Gesten gibt, diese einzeln behandeln und HTML Interface ändern
   if (results.gestures.length > 0) {
-    // parse information
-    const categoryName = results.gestures[0][0].categoryName;
-    const categoryScore = parseFloat(
-      results.gestures[0][0].score * 100
-    ).toFixed(2);
+    // Jede Geste einzeln behandeln
+    for (let i = 0; i < results.gestures.length; i++) {
+      const gesture = results.gestures[i][0];
+      const handedness = results.handednesses[i][0];
+      const landmarks = results.landmarks[i];
 
-    // which hand
-    if (results.handednesses[0][0].index == 0) {
-      // right
-      const landmarks = results.landmarks[0];
-      let landmarksX = landmarks.map((element) => element.x);
-      let landmarksY = landmarks.map((element) => element.y);
-      var rightX = calculateAverage(landmarksX);
-      var rightY = calculateAverage(landmarksY);
-      console.log("right Hand coordinates: ", rightX, rightY);
-    } else if (results.handednesses[0][0].index == 1) {
-      // left
-      const landmarks = results.landmarks[0];
-      let landmarksX = landmarks.map((element) => element.x);
-      let landmarksY = landmarks.map((element) => element.y);
-      var leftX = calculateAverage(landmarksX);
-      var leftY = calculateAverage(landmarksY);
-      console.log("left Hand coordinates: ", leftX, leftY);
+      handleGesture(gesture, handedness, landmarks);
+
+      /* // change the html interface
+      gestureOutput.style.display = "block";
+      gestureOutput.style.width = videoWidth;
+      gestureOutput.innerText = `GestureRecognizer: ${categoryName}\n Confidence: ${categoryScore} %`;*/
     }
-
-    // print the result to console
-    console.log(results, categoryName, categoryScore);
-
-    // parse information and generate midi
-    generateMidi(categoryName, categoryScore);
-
-    // change the html interface
-    gestureOutput.style.display = "block";
-    gestureOutput.style.width = videoWidth;
-    gestureOutput.innerText = `GestureRecognizer: ${categoryName}\n Confidence: ${categoryScore} %`;
   } else {
-    gestureOutput.style.display = "none";
+    //gestureOutput.style.display = "none";
   }
+
   // Call this function again to keep predicting when the browser is ready.
   if (webcamRunning === true) {
     window.requestAnimationFrame(predictWebcam);
   }
+}
+
+/********************************************************************
+ // Geste
+********************************************************************/
+
+// Behandelt die einzelnen Gesten
+function handleGesture(gesture, handedness, landmarks) {
+  /* console.log("Gesture: " + JSON.stringify(gesture));
+  console.log("Handedness: " + JSON.stringify(handedness));
+  console.log("Landmarks: " + JSON.stringify(landmarks));*/
+
+  // parse information
+  const gestureName = gesture.categoryName;
+  const gestureScore = parseFloat(gesture.score * 100).toFixed(2);
+  const hand = handedness.displayName;
+
+  // calulate the position of the hand
+  let landmarksX = landmarks.map((element) => element.x);
+  let landmarksY = landmarks.map((element) => element.y);
+  let landmarksXAvg = landmarksX.reduce((p, c) => p + c, 0) / landmarksX.length;
+  let landmarksYAvg = landmarksY.reduce((p, c) => p + c, 0) / landmarksY.length;
+  var handX = parseFloat(landmarksXAvg * 100).toFixed(2);
+  var handY = parseFloat(landmarksYAvg * 100).toFixed(2);
+
+  // print the result to console
+  console.log(
+    `${hand} Hand (X: ${handX}, Y: ${handY}), Geste: ${gestureName} (${gestureScore}%)`
+  );
+
+  // TODO: Hier könnte man filtern, ob die Geste bei einem zu niedrigen Score ignoriert wird
+
+  // Midi generieren
+  //generateMidi(gestureName, gestureScore);
 }
 
 /********************************************************************
