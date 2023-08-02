@@ -112,15 +112,12 @@ async function predictWebcam() {
         const handScore = parseFloat(handedness.score * 100).toFixed(2);
 
         // calulate the position of the hand
-        let landmarksX = landmarks.map((element) => element.x);
         let landmarksY = landmarks.map((element) => element.y);
-        let landmarksXAvg = landmarksX.reduce((p, c) => p + c, 0) / landmarksX.length;
-        let landmarksYAvg = landmarksY.reduce((p, c) => p + c, 0) / landmarksY.length;
-        var handX = parseFloat(landmarksXAvg * 100).toFixed(2);
-        var handY = parseFloat(landmarksYAvg * 100).toFixed(2);
+        let landmarksYMax = Math.max(...landmarksY); // im Bild niedrigster Punkt
+        var handY = parseFloat(landmarksYMax * 100).toFixed(2);
 
         /*console.log(
-          `${hand} Hand (X: ${handX}, Y: ${handY}, Score: ${handScore}), Geste: ${gestureName} (${gestureScore}%)`
+          `${hand} Hand X: ${handX}, Score: ${handScore}), Geste: ${gestureName} (${gestureScore}%)`
         );*/
 
         generateMidi(gestureName, gestureScore, handY);
