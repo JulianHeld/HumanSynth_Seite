@@ -92,22 +92,45 @@ async function predictWebcam() {
   canvasCtx.restore();
 
   // Wenn es eine Gesten gibt, diese einzeln behandeln und HTML Interface ändern
-  if (results.gestures.length > 0) {
-    // Jede Geste einzeln behandeln
-    for (let i = 0; i < results.gestures.length; i++) {
-      const gesture = results.gestures[i][0];
-      const handedness = results.handednesses[i][0];
-      const landmarks = results.landmarks[i];
+  if (results.handednesses.length > 0) {
+    // Linke Hand finden
+    const linkeHandIndex = 
+        results.handednesses[0][0].categoryName == "Right" ? 0 
+              : results.handednesses.length > 1 && results.handednesses[1][0].categoryName == "Right" ? 1 
+                    : -1;
 
-      handleGesture(gesture, handedness, landmarks);
+    // Linke hand ist da
+    if(linkeHandIndex != -1){
+        // parse information
+        const gesture = results.gestures[linkeHandIndex][0];
+        const handedness = results.handednesses[linkeHandIndex][0];
+        const landmarks = results.landmarks[linkeHandIndex];
+        
+        const gestureName = gesture.categoryName;
+        const gestureScore = parseFloat(gesture.score * 100).toFixed(2);
+        const hand = handedness.displayName;
+        const handScore = parseFloat(handedness.score * 100).toFixed(2);
 
-      /* // change the html interface
-      gestureOutput.style.display = "block";
-      gestureOutput.style.width = videoWidth;
-      gestureOutput.innerText = `GestureRecognizer: ${categoryName}\n Confidence: ${categoryScore} %`;*/
+        // calulate the position of the hand
+        let landmarksX = landmarks.map((element) => element.x);
+        let landmarksY = landmarks.map((element) => element.y);
+        let landmarksXAvg = landmarksX.reduce((p, c) => p + c, 0) / landmarksX.length;
+        let landmarksYAvg = landmarksY.reduce((p, c) => p + c, 0) / landmarksY.length;
+        var handX = parseFloat(landmarksXAvg * 100).toFixed(2);
+        var handY = parseFloat(landmarksYAvg * 100).toFixed(2);
+
+        console.log(
+          `${hand} Hand (X: ${handX}, Y: ${handY}, Score: ${handScore}), Geste: ${gestureName} (${gestureScore}%)`
+        );
+
+        generateMidi(gestureName, gestureScore);
+    } else {
+      // Linke Hand ist nicht da
+      stopMidi();
     }
-  } else {
-    //gestureOutput.style.display = "none";
+  } else{
+    // Stoppen, wenn keine Hand erkannt
+    stopMidi();
   }
 
   // Call this function again to keep predicting when the browser is ready.
@@ -122,7 +145,7 @@ async function predictWebcam() {
 
 // Behandelt die einzelnen Gesten
 function handleGesture(gesture, handedness, landmarks) {
-  /* console.log("Gesture: " + JSON.stringify(gesture));
+  /*console.log("Gesture: " + JSON.stringify(gesture));
   console.log("Handedness: " + JSON.stringify(handedness));
   console.log("Landmarks: " + JSON.stringify(landmarks));*/
 
@@ -147,7 +170,7 @@ function handleGesture(gesture, handedness, landmarks) {
   // TODO: Hier könnte man filtern, ob die Geste bei einem zu niedrigen Score ignoriert wird
 
   // Midi generieren
-  //generateMidi(gestureName, gestureScore);
+  generateMidi(gestureName, gestureScore);
 }
 
 /********************************************************************
@@ -160,6 +183,13 @@ let currentChannel = idleChannel; // aktueller Channel/Gestes (am Anfang idleCha
 let midiOut = []; // Midi Outputs (werden in initDevices gesetzt)
 
 // ############ Funktionen ############
+
+// Sende idle channel, falls aktuell nicht in idle
+function stopMidi(){
+  if(currentChannel != idleChannel){
+    generateMidi("Closed_Fist", 0);
+  }
+}
 
 function midiReady(midi) {
   // Also react to device changes.
