@@ -119,11 +119,11 @@ async function predictWebcam() {
         var handX = parseFloat(landmarksXAvg * 100).toFixed(2);
         var handY = parseFloat(landmarksYAvg * 100).toFixed(2);
 
-        console.log(
+        /*console.log(
           `${hand} Hand (X: ${handX}, Y: ${handY}, Score: ${handScore}), Geste: ${gestureName} (${gestureScore}%)`
-        );
+        );*/
 
-        generateMidi(gestureName, gestureScore);
+        generateMidi(gestureName, gestureScore, handY);
     } else {
       // Linke Hand ist nicht da
       stopMidi();
@@ -153,7 +153,7 @@ let midiOut = []; // Midi Outputs (werden in initDevices gesetzt)
 // Sende idle channel, falls aktuell nicht in idle
 function stopMidi(){
   if(currentChannel != idleChannel){
-    sendMidiMessage(idleChannel, 50, 100);
+    sendMidiMessage(idleChannel, 50, 100, 0);
   }
 }
 
@@ -175,9 +175,20 @@ function initDevices(midi) {
   }
 }
 
-function sendMidiMessage(channel, pitch, velocity) {
+function sendMidiMessage(channel, pitch, velocity, handY) {
   const noteOnMessage = [0x90, pitch, velocity];
   const noteOffMessage = [0x80, pitch, velocity];
+
+  // 0 - 127
+  const velocityMinMax = Math.abs(Math.max(Math.min(handY * 1.27, 127), 0) - 127);
+  console.log(velocityMinMax);
+
+  
+  // Midi Channel für Velocity
+  const velocityDevice = midiOut[7];
+  const velocityNote = [0x90, 50, velocityMinMax];
+  velocityDevice.send(velocityNote);
+  
 
   // Bei channel Wechsel / andere Geste
   if (channel != currentChannel) {
@@ -197,23 +208,23 @@ function sendMidiMessage(channel, pitch, velocity) {
 }
 
 // Übersetze Geste in Midi Channel und sende diese an sendMidiChannel
-function generateMidi(gestureName, gestureConfidence) {
+function generateMidi(gestureName, gestureConfidence, handY) {
   const gestureToChannelMap = {
     Closed_Fist: idleChannel,
     Open_Palm: 1,
-    Pointing_Up: 3,
-    Thumb_Down: 4,
-    Thumb_Up: 5,
-    Victory: 6,
-    ILoveYou: 7,
+    Pointing_Up: 2,
+    Thumb_Down: 3,
+    Thumb_Up: 4,
+    Victory: 5,
+    ILoveYou: 6,
   };
 
   const channel = gestureToChannelMap[gestureName] || idleChannel; // Channel der Geste
-  let pitch = 50; //
-  let velocity = 100; // Später eventuell: y coordinate
+  let pitch = 50;
+  let velocity = 100;
 
   // send midi
-  sendMidiMessage(channel, pitch, velocity);
+  sendMidiMessage(channel, pitch, velocity, handY);
 }
 
 /********************************************************************
