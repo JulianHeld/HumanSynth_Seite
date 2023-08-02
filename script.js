@@ -140,40 +140,6 @@ async function predictWebcam() {
 }
 
 /********************************************************************
- // Geste
-********************************************************************/
-
-// Behandelt die einzelnen Gesten
-function handleGesture(gesture, handedness, landmarks) {
-  /*console.log("Gesture: " + JSON.stringify(gesture));
-  console.log("Handedness: " + JSON.stringify(handedness));
-  console.log("Landmarks: " + JSON.stringify(landmarks));*/
-
-  // parse information
-  const gestureName = gesture.categoryName;
-  const gestureScore = parseFloat(gesture.score * 100).toFixed(2);
-  const hand = handedness.displayName;
-
-  // calulate the position of the hand
-  let landmarksX = landmarks.map((element) => element.x);
-  let landmarksY = landmarks.map((element) => element.y);
-  let landmarksXAvg = landmarksX.reduce((p, c) => p + c, 0) / landmarksX.length;
-  let landmarksYAvg = landmarksY.reduce((p, c) => p + c, 0) / landmarksY.length;
-  var handX = parseFloat(landmarksXAvg * 100).toFixed(2);
-  var handY = parseFloat(landmarksYAvg * 100).toFixed(2);
-
-  // print the result to console
-  console.log(
-    `${hand} Hand (X: ${handX}, Y: ${handY}), Geste: ${gestureName} (${gestureScore}%)`
-  );
-
-  // TODO: Hier könnte man filtern, ob die Geste bei einem zu niedrigen Score ignoriert wird
-
-  // Midi generieren
-  generateMidi(gestureName, gestureScore);
-}
-
-/********************************************************************
  // Midi
 ********************************************************************/
 
@@ -187,7 +153,7 @@ let midiOut = []; // Midi Outputs (werden in initDevices gesetzt)
 // Sende idle channel, falls aktuell nicht in idle
 function stopMidi(){
   if(currentChannel != idleChannel){
-    generateMidi("Closed_Fist", 0);
+    sendMidiMessage(idleChannel, 50, 100);
   }
 }
 
