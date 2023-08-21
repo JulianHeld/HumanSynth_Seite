@@ -98,29 +98,36 @@ async function predictWebcam() {
         results.handednesses[0][0].categoryName == "Right" ? 0 
               : results.handednesses.length > 1 && results.handednesses[1][0].categoryName == "Right" ? 1 
                     : -1;
+                     
+    // Rechte Hand finden
+    const rechteHandIndex = 
+      results.handednesses[0][0].categoryName == "Left" ? 0 
+            : results.handednesses.length > 1 && results.handednesses[1][0].categoryName == "Left" ? 1 
+                  : -1;
+
 
     // Linke hand ist da
     if(linkeHandIndex != -1){
-        // parse information
+        // Geste linker Hand
         const gesture = results.gestures[linkeHandIndex][0];
-        const handedness = results.handednesses[linkeHandIndex][0];
-        const landmarks = results.landmarks[linkeHandIndex];
-        
         const gestureName = gesture.categoryName;
-        const gestureScore = parseFloat(gesture.score * 100).toFixed(2);
-        const hand = handedness.displayName;
-        const handScore = parseFloat(handedness.score * 100).toFixed(2);
 
-        // calulate the position of the hand
-        let landmarksY = landmarks.map((element) => element.y);
-        let landmarksYMax = Math.max(...landmarksY); // im Bild niedrigster Punkt
-        var handY = parseFloat(landmarksYMax * 100).toFixed(2);
+        // Höhe linker Hand berechnen
+        const leftLandmarks = results.landmarks[linkeHandIndex];
+        let leftlandmarksY = leftLandmarks.map((element) => element.y);
+        let leftlandmarksYMax = Math.max(...leftlandmarksY); // im Bild niedrigster Punkt
+        var leftHandY = parseFloat(leftlandmarksYMax * 100).toFixed(2);
+        
+        let rightHandY = 0; // Standardhöhe wenn keine rechte Hand da
+        if(rechteHandIndex != -1){
+          // Höhe linker Hand berechnen
+          const rightLandmarks = results.landmarks[rechteHandIndex];
+          let rightlandmarksY = rightLandmarks.map((element) => element.y);
+          let rightlandmarksYMax = Math.min(...rightlandmarksY); // im Bild höchster Punkt
+          rightHandY = parseFloat(rightlandmarksYMax * 100).toFixed(2);
+        }
 
-        /*console.log(
-          `${hand} Hand X: ${handX}, Score: ${handScore}), Geste: ${gestureName} (${gestureScore}%)`
-        );*/
-
-        generateMidi(gestureName, gestureScore, handY);
+        generateMidi(gestureName, leftHandY, rightHandY);
     } else {
       // Linke Hand ist nicht da
       stopMidi();
@@ -172,11 +179,16 @@ function initDevices(midi) {
   }
 }
 
-function sendMidiMessage(channel, pitch, velocity, pitchMinMax) {
+function sendMidiMessage(channel, pitch, velocity, pitchMinMax, cutoffMinMax) {
   // Midi Channel für Pitch
   const pitchDevice = midiOut[7];
   const pitchNote = [0x90, 50, pitchMinMax];
   pitchDevice.send(pitchNote);
+
+  // Midi Channel für Cutoff
+  const cutoffDevice = midiOut[8];
+  const cutoffNote = [0x90, 50, cutoffMinMax];
+  cutoffDevice.send(cutoffNote);
 
   // Bei channel Wechsel / andere Geste
   if (channel != currentChannel) {
@@ -199,7 +211,7 @@ function sendMidiMessage(channel, pitch, velocity, pitchMinMax) {
 }
 
 // Übersetze Geste in Midi Channel und sende diese an sendMidiChannel
-function generateMidi(gestureName, gestureConfidence, handY) {
+function generateMidi(gestureName, leftHandY, rightHandY) {
   const gestureToChannelMap = {
     Closed_Fist: idleChannel,
     Open_Palm: 1,
@@ -215,10 +227,13 @@ function generateMidi(gestureName, gestureConfidence, handY) {
   let velocity = 100;
 
   // Pitch (0 - 127)
-  const pitchMinMax = Math.abs(Math.max(Math.min(handY * 1.27, 127), 0) - 127);
+  const pitchMinMax = Math.abs(Math.max(Math.min(leftHandY * 1.27, 127), 0) - 127);
+
+   // Cutoff (0 - 127)
+   const cutoffMinMax = Math.abs(Math.max(Math.min(rightHandY * 1.27, 127), 0) );
 
   // send midi
-  sendMidiMessage(channel, pitch, velocity, pitchMinMax);
+  sendMidiMessage(channel, pitch, velocity, pitchMinMax, cutoffMinMax);
 }
 
 /********************************************************************
