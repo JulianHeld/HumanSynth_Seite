@@ -172,23 +172,17 @@ function initDevices(midi) {
   }
 }
 
-function sendMidiMessage(channel, pitch, velocity, handY) {
-  const noteOnMessage = [0x90, pitch, velocity];
-  const noteOffMessage = [0x80, pitch, velocity];
-
-  // 0 - 127
-  const velocityMinMax = Math.abs(Math.max(Math.min(handY * 1.27, 127), 0) - 127);
-  console.log(velocityMinMax);
-
-  
-  // Midi Channel für Velocity
-  const velocityDevice = midiOut[7];
-  const velocityNote = [0x90, 50, velocityMinMax];
-  velocityDevice.send(velocityNote);
-  
+function sendMidiMessage(channel, pitch, velocity, pitchMinMax) {
+  // Midi Channel für Pitch
+  const pitchDevice = midiOut[7];
+  const pitchNote = [0x90, 50, pitchMinMax];
+  pitchDevice.send(pitchNote);
 
   // Bei channel Wechsel / andere Geste
   if (channel != currentChannel) {
+    const noteOnMessage = [0x90, pitch, velocity];
+    const noteOffMessage = [0x80, pitch, velocity];
+
     // Wenn aktuell ein Ton spielt, diesen stoppen
     if (currentChannel != idleChannel) {
       const currentDevice = midiOut[currentChannel];
@@ -220,8 +214,11 @@ function generateMidi(gestureName, gestureConfidence, handY) {
   let pitch = 50;
   let velocity = 100;
 
+  // Pitch (0 - 127)
+  const pitchMinMax = Math.abs(Math.max(Math.min(handY * 1.27, 127), 0) - 127);
+
   // send midi
-  sendMidiMessage(channel, pitch, velocity, handY);
+  sendMidiMessage(channel, pitch, velocity, pitchMinMax);
 }
 
 /********************************************************************
